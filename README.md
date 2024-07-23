@@ -4,3 +4,7 @@
 
 \cmake-build-debug-ubuntu20\include\config.h
 文件是从zk 3.8编译好的文件复制过来的
+
+## 库头文件处理
+include文件夹下所有文件
+generated

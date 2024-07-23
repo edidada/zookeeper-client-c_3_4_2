@@ -170,7 +170,7 @@ target_include_directories(hashtable PUBLIC include)
 target_link_libraries(hashtable PUBLIC $<$<OR:$<PLATFORM_ID:Linux>,$<PLATFORM_ID:FreeBSD>>:m>)
 
 # zookeeper library
-set(zkmt_la_sources
+set(zookeeper_mt_sources
         src/zookeeper.c
 	src/recordio.c
 	generated/zookeeper.jute.c
@@ -178,22 +178,22 @@ set(zkmt_la_sources
 	src/zk_hashtable.c src/mt_adaptor.c)
 
 if(WANT_SYNCAPI)
-    list(APPEND zkmt_la_sources src/mt_adaptor.c)
+    list(APPEND zookeeper_mt_sources src/mt_adaptor.c)
 else()
-    list(APPEND zkmt_la_sources src/st_adaptor.c)
+    list(APPEND zookeeper_mt_sources src/st_adaptor.c)
 endif()
 
 if(CYRUS_SASL_FOUND)
-    list(APPEND zkmt_la_sources src/zk_sasl.c)
+    list(APPEND zookeeper_mt_sources src/zk_sasl.c)
 endif()
 
 if(WIN32)
-    list(APPEND zkmt_la_sources src/winport.c)
+    list(APPEND zookeeper_mt_sources src/winport.c)
 endif()
 
-add_library(zkmt_la SHARED ${zkmt_la_sources})
-target_include_directories(zkmt_la PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/include generated)
-target_link_libraries(zkmt_la PUBLIC
+add_library(zookeeper_mt SHARED ${zookeeper_mt_sources})
+target_include_directories(zookeeper_mt PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/include generated)
+target_link_libraries(zookeeper_mt PUBLIC
         hashtable
         $<$<PLATFORM_ID:Linux>:rt> # clock_gettime
         $<$<PLATFORM_ID:Windows>:ws2_32>) # Winsock 2.0
@@ -206,8 +206,8 @@ if(NOT WITH_OPENSSL STREQUAL "OFF")
     endif()
     find_package(OpenSSL)
     if(OPENSSL_FOUND)
-        target_compile_definitions(zkmt_la PUBLIC HAVE_OPENSSL_H)
-        target_link_libraries(zkmt_la PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+        target_compile_definitions(zookeeper_mt PUBLIC HAVE_OPENSSL_H)
+        target_link_libraries(zookeeper_mt PUBLIC OpenSSL::SSL OpenSSL::Crypto)
         message("-- OpenSSL libraries found! will build with SSL support.")
     else()
         message("-- WARNING: unable to find OpenSSL libraries! will build without SSL support.")
@@ -216,22 +216,22 @@ endif()
 
 if(WANT_SYNCAPI AND NOT WIN32)
     find_package(Threads REQUIRED)
-    target_link_libraries(zkmt_la PUBLIC Threads::Threads)
+    target_link_libraries(zookeeper_mt PUBLIC Threads::Threads)
 endif()
 
 if(CYRUS_SASL_FOUND)
-    target_compile_definitions(zkmt_la PUBLIC HAVE_CYRUS_SASL_H)
-    target_link_libraries(zkmt_la PUBLIC CyrusSASL)
+    target_compile_definitions(zookeeper_mt PUBLIC HAVE_CYRUS_SASL_H)
+    target_link_libraries(zookeeper_mt PUBLIC CyrusSASL)
 endif()
 
 # cli executable
 add_executable(cli src/cli.c)
-target_link_libraries(cli zkmt_la)
+target_link_libraries(cli zookeeper_mt)
 
 # load_gen executable
 if(WANT_SYNCAPI AND NOT WIN32)
     add_executable(load_gen src/load_gen.c)
-    target_link_libraries(load_gen zkmt_la)
+    target_link_libraries(load_gen zookeeper_mt)
 endif()
 
 # tests
