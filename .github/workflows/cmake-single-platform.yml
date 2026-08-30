@@ -11,6 +11,8 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+  # ZooKeeper server release used to run the integration tests
+  ZK_VERSION: 3.4.14
 
 jobs:
   build:
@@ -25,6 +27,24 @@ jobs:
     - name: Install dependencies
       # CppUnit is required to build and run the tests
       run: sudo apt-get update && sudo apt-get install -y libcppunit-dev
+
+    - name: Set up JDK
+      # The test suite starts a real ZooKeeper server (Java) via tests/zkServer.sh,
+      # so a JDK is required.
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '8'
+
+    - name: Download ZooKeeper server
+      # tests/zkServer.sh expects the server jars in src/java/lib
+      run: |
+        curl -fsSL -o /tmp/zookeeper.tar.gz \
+          https://archive.apache.org/dist/zookeeper/zookeeper-${{env.ZK_VERSION}}/zookeeper-${{env.ZK_VERSION}}.tar.gz
+        tar -xzf /tmp/zookeeper.tar.gz -C /tmp
+        mkdir -p src/java/lib
+        cp /tmp/zookeeper-${{env.ZK_VERSION}}/zookeeper-${{env.ZK_VERSION}}.jar src/java/lib/
+        cp /tmp/zookeeper-${{env.ZK_VERSION}}/lib/*.jar src/java/lib/
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -44,4 +64,3 @@ jobs:
     - name: Install
       # Install the libraries and binaries into the system prefix.
       run: sudo cmake --install ${{github.workspace}}/build
-
