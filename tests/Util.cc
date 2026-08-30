@@ -18,6 +18,7 @@
 
 #include "Util.h"
 #include "string.h"
+#include <time.h>
 
 const std::string EMPTY_STRING;
 

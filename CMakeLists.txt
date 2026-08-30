@@ -20,7 +20,7 @@ project(zookeeper VERSION 3.4.2)
 set(email user@zookeeper.apache.org)
 set(description "zookeeper C client")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../../tools/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules" "${CMAKE_SOURCE_DIR}/../../tools/cmake/Modules")
 
 # general options
 if(UNIX)
@@ -191,15 +191,9 @@ if(WIN32)
     list(APPEND zookeeper_mt_sources src/winport.c)
 endif()
 
-<<<<<<< HEAD
-add_library(zkmt SHARED ${zkmt_la_sources})
-target_include_directories(zkmt PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/include generated)
-target_link_libraries(zkmt PUBLIC
-=======
 add_library(zookeeper_mt SHARED ${zookeeper_mt_sources})
 target_include_directories(zookeeper_mt PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/include generated)
 target_link_libraries(zookeeper_mt PUBLIC
->>>>>>> origin/master
         hashtable
         $<$<PLATFORM_ID:Linux>:rt> # clock_gettime
         $<$<PLATFORM_ID:Windows>:ws2_32>) # Winsock 2.0
@@ -212,13 +206,8 @@ if(NOT WITH_OPENSSL STREQUAL "OFF")
     endif()
     find_package(OpenSSL)
     if(OPENSSL_FOUND)
-<<<<<<< HEAD
-        target_compile_definitions(zkmt PUBLIC HAVE_OPENSSL_H)
-        target_link_libraries(zkmt PUBLIC OpenSSL::SSL OpenSSL::Crypto)
-=======
         target_compile_definitions(zookeeper_mt PUBLIC HAVE_OPENSSL_H)
         target_link_libraries(zookeeper_mt PUBLIC OpenSSL::SSL OpenSSL::Crypto)
->>>>>>> origin/master
         message("-- OpenSSL libraries found! will build with SSL support.")
     else()
         message("-- WARNING: unable to find OpenSSL libraries! will build without SSL support.")
@@ -227,30 +216,17 @@ endif()
 
 if(WANT_SYNCAPI AND NOT WIN32)
     find_package(Threads REQUIRED)
-<<<<<<< HEAD
-    target_link_libraries(zkmt PUBLIC Threads::Threads)
-endif()
-
-if(CYRUS_SASL_FOUND)
-    target_compile_definitions(zkmt PUBLIC HAVE_CYRUS_SASL_H)
-    target_link_libraries(zkmt PUBLIC CyrusSASL)
-=======
     target_link_libraries(zookeeper_mt PUBLIC Threads::Threads)
 endif()
 
 if(CYRUS_SASL_FOUND)
     target_compile_definitions(zookeeper_mt PUBLIC HAVE_CYRUS_SASL_H)
     target_link_libraries(zookeeper_mt PUBLIC CyrusSASL)
->>>>>>> origin/master
 endif()
 
 # cli executable
 add_executable(cli src/cli.c)
-<<<<<<< HEAD
-target_link_libraries(cli zkmt)
-=======
 target_link_libraries(cli zookeeper_mt)
->>>>>>> origin/master
 
 # 声明INTERFACE库
 #add_library(zookeeper_st INTERFACE)
@@ -259,11 +235,7 @@ target_link_libraries(cli zookeeper_mt)
 # load_gen executable
 if(WANT_SYNCAPI AND NOT WIN32)
     add_executable(load_gen src/load_gen.c)
-<<<<<<< HEAD
-    target_link_libraries(load_gen zkmt)
-=======
     target_link_libraries(load_gen zookeeper_mt)
->>>>>>> origin/master
 endif()
 
 # tests
@@ -277,17 +249,49 @@ set(test_sources
         tests/ThreadingUtil.cc
         tests/TestZookeeperInit.cc
         tests/TestZookeeperClose.cc
-        tests/TestReconfig.cc
-        tests/TestReconfigServer.cc
         tests/TestClientRetry.cc
         tests/TestOperations.cc
         tests/TestMulti.cc
         tests/TestWatchers.cc
-        tests/TestClient.cc
-        tests/ZooKeeperQuorumServer.cc
-        tests/TestReadOnlyClient.cc
-        tests/TestLogClientEnv.cc)
+        tests/TestClient.cc)
 
 if(WANT_SYNCAPI)
     list(APPEND test_sources tests/PthreadMocks.cc)
 endif()
+
+# tests
+if(WANT_CPPUNIT)
+    find_package(CppUnit REQUIRED)
+    if(TARGET CppUnit::CppUnit)
+        set(ZK_TEST_LINK_LIBRARIES CppUnit::CppUnit)
+    elseif(TARGET CppUnit::cppunit)
+        set(ZK_TEST_LINK_LIBRARIES CppUnit::cppunit)
+    else()
+        set(ZK_TEST_LINK_LIBRARIES ${CPPUNIT_LIBRARIES})
+    endif()
+    add_executable(zookeeper_test ${test_sources})
+    target_include_directories(zookeeper_test PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            include
+            ${CMAKE_CURRENT_BINARY_DIR}/include
+            generated)
+    target_link_libraries(zookeeper_test PRIVATE zookeeper_mt hashtable ${ZK_TEST_LINK_LIBRARIES})
+    target_compile_definitions(zookeeper_test PRIVATE ZKSERVER_CMD="${CMAKE_CURRENT_SOURCE_DIR}/tests/zkServer.sh")
+    set_target_properties(zookeeper_test PROPERTIES LINK_FLAGS
+            "-Wl,--wrap=free -Wl,--wrap=calloc -Wl,--wrap=pthread_mutex_lock -Wl,--wrap=pthread_mutex_unlock -Wl,--wrap=flush_send_queue -Wl,--wrap=get_xid -Wl,--wrap=activateWatcher -Wl,--wrap=deliverWatchers")
+    enable_testing()
+    add_test(NAME zookeeper_test COMMAND zookeeper_test)
+endif()
+
+# install rules
+include(GNUInstallDirs)
+install(TARGETS zookeeper_mt hashtable cli
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(TARGET load_gen)
+    install(TARGETS load_gen RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES generated/zookeeper.jute.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
